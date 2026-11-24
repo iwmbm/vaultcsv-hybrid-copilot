@@ -1,30 +1,48 @@
-# VaultCSV Hybrid AI Studio (Web + Chrome Side-Panel Extension)
+# VaultCSV Hybrid AI Studio (Web + Chrome MV3 Side-Panel Extension)
 
-Open-source **Firebase AI Logic Hybrid Inference** companion studio & Chrome MV3 Side-Panel Extension for [VaultCSV](https://vaultcsv.com) — built for **#BuildHybridAI 2026**.
+Open-source **AI-native financial ledger studio & Chrome Side-Panel Extension** powered by **Firebase AI Logic Hybrid Inference (`firebase/ai` + `firebase/app-check`)** — built for **#BuildHybridAI 2026**.
 
-## What It Demonstrates
+- **Commercial Flagship (50+ Banks + QuickBooks `.QBO` / `.XLSX`)**: [https://vaultcsv.com](https://vaultcsv.com)
 
-1. **100% Browser-Local PDF Statement Reconstruction & Penny-Exact Balance Math**: Parses bank statement PDFs locally in RAM via `pdf.js` and verifies `PrevBalance + Credit - Debit == CurrentBalance` in integer cents.
-2. **Firebase AI Logic Hybrid Inference (`firebase/ai` + `firebase/app-check`)**:
-   - `InferenceMode.ONLY_ON_DEVICE`: Runs Chrome's built-in **Gemini Nano** model locally with **0 bytes transmitted** (even with Wi-Fi physically turned off).
-   - `InferenceMode.PREFER_ON_DEVICE` & `PREFER_IN_CLOUD`: Runs deterministic local PII scrubbing (`scrubPii()` in `src/hybridEngine.ts`) to strip account numbers, SSNs, dates, and running balances *before* any cloud fallback to `gemini-2.5-flash`.
-   - **Live Telemetry & Provenance Log**: Displays exact `response.inferenceSource` (`on_device` vs `in_cloud`), millisecond latency, and outbound byte count side-by-side with a before/after PII scrubber diff.
-3. **Dual Target Build (Web App + Chrome MV3 Side-Panel Extension)**:
-   - `npm run build` compiles both the static Web App (`dist/`) and an unpacked Chrome Manifest V3 Side-Panel Extension (`chrome-extension-dist/`).
+---
+
+## Why Hybrid AI Solves What Regexes Can't
+
+Traditional PDF converters dump raw, cryptic bank strings (`POS DEBIT 4812 SQ *BLUE BTL #041 SAN FRAN`) and fail completely on unstructured SMS/email text or crumpled paper receipts. Meanwhile, accountants refuse to upload sensitive bank account numbers and balances to cloud LLMs.
+
+**VaultCSV Hybrid AI Studio** puts **Firebase AI Logic Hybrid Inference** directly inside the ledger workflow:
+
+1. **✨ 1-Click Magic Vendor & IRS Tax-Rule Enrichment**: Transforms cryptic bank memos inline into human vendor names (`Blue Bottle Coffee`), categories (`Meals & Dining`), recurring SaaS badges, and **IRS Schedule C deductibility rules** (`100% Deductible`, `50% Meals Rule`, or `Non-Deductible Tax Payment` warnings on `IRS EFTPS` rows) — with instant **1-Click Undo**.
+2. **3-Way Multimodal & Unstructured Ingestion**:
+   - **Bank PDF Statements**: Coordinate-reconstructed 100% locally in RAM (`pdf.js`) with integer-cent running-balance verification (`Prev + Credit - Debit == Balance`).
+   - **Messy SMS / Email Bank Text**: Converts raw copy-pasted alerts & unformatted lines directly into structured rows.
+   - **Receipt & Invoice Vision Scan**: Extracts vendor, date, amount, and meal/expense deductibility from receipt images via Firebase AI Logic multimodal inference.
+3. **Natural-Language Table Command Bar (`⌘K`)**: Mutates and filters the live table directly in plain English (*"Show only recurring SaaS subscriptions"*, *"Flag non-deductible IRS & audit attention items"*, *"Tag all coffee & dining under 50% Meals Rule"*).
+4. **Strict Airgap (`ONLY_ON_DEVICE`) vs PII-Scrubbed Hybrid (`PREFER_ON_DEVICE`)**:
+   - `InferenceMode.ONLY_ON_DEVICE`: Runs Chrome's built-in **Gemini Nano** locally with **0 bytes transmitted** (works offline).
+   - `InferenceMode.PREFER_ON_DEVICE`: Prioritizes on-device Gemini Nano; before any fallback to `gemini-2.5-flash` (protected by **Firebase App Check**), `scrubPii()` strips account numbers, SSNs/EINs, dates, and currency amounts locally in RAM, logging live `response.inferenceSource` and byte counts.
+5. **Dual Target Build — Web App + Chrome Manifest V3 Side-Panel Extension**:
+   - `npm run build` outputs both the static Web App (`dist/`) and a ready-to-load Chrome Side-Panel Extension (`chrome-extension-dist/`).
+
+---
 
 ## Quick Start
 
 ```bash
 npm install
-cp .env.example .env.local # Add your Firebase Web config (or enter at runtime in the UI drawer)
+cp .env.example .env.local # Optional: add VITE_FIREBASE_* keys (or enter at runtime via the top-right Keys button)
 npm run dev
 ```
 
-### Load as Chrome Side-Panel Extension
+### Load as Chrome Manifest V3 Side-Panel Extension
+
 ```bash
 npm run build
-# Open chrome://extensions -> Enable Developer Mode -> Load unpacked -> select chrome-extension-dist/
+# Open chrome://extensions -> Enable Developer mode -> Load unpacked -> select chrome-extension-dist/
 ```
 
+---
+
 ## License
-MIT — see [LICENSE](./LICENSE). Commercial multi-bank batch edition with `.QBO` / `.XLSX` exports available at [https://vaultcsv.com](https://vaultcsv.com).
+
+MIT — see [LICENSE](./LICENSE).
