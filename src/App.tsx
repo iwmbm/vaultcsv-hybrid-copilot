@@ -113,7 +113,7 @@ export default function App() {
     try {
       const target =
         file ?? new File([new Uint8Array([137, 80, 78, 71])], 'sample-coffee-receipt.png', { type: 'image/png' });
-      const res = await parseReceiptImageWithHybridAi(target, fbConfig);
+      const res = await parseReceiptImageWithHybridAi(target, fbConfig, mode);
       setUndoSnapshot(rows);
       setRows((prev) => [res.row, ...prev]);
       if (!sourceLabel) setSourceLabel('Receipt Vision Ledger');

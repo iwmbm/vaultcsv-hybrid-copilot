@@ -407,8 +407,19 @@ async function invokeFirebaseHybridModel(
           ? InferenceMode.PREFER_IN_CLOUD
           : InferenceMode.PREFER_ON_DEVICE;
 
+    const hasImagePart =
+      Array.isArray(prompt) &&
+      prompt.some((p) => typeof p === 'object' && p !== null && 'inlineData' in p);
+
     const model = getGenerativeModel(ai, {
       mode: sdkMode,
+      onDeviceParams: hasImagePart
+        ? {
+            createOptions: {
+              expectedInputs: [{ type: 'text' }, { type: 'image' }],
+            },
+          }
+        : undefined,
       inCloudParams: { model: 'gemini-2.5-flash' },
     });
 
@@ -421,16 +432,35 @@ async function invokeFirebaseHybridModel(
     };
   }
 
-  // 2. Direct Chrome Built-in Gemini Nano Prompt API if available without Firebase cloud keys
-  if (typeof prompt === 'string' && typeof window !== 'undefined' && 'LanguageModel' in window) {
+  // 2. Direct Chrome Built-in Gemini Nano Prompt API (Text + Multimodal Vision) without Firebase cloud keys
+  if (typeof window !== 'undefined' && 'LanguageModel' in window) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const LM = (window as any).LanguageModel;
-      const avail = await LM.availability?.();
+      const hasImagePart =
+        Array.isArray(prompt) &&
+        prompt.some((p) => typeof p === 'object' && p !== null && 'inlineData' in p);
+      const createOpts = hasImagePart
+        ? { expectedInputs: [{ type: 'text' }, { type: 'image' }] }
+        : undefined;
+      const avail = await LM.availability?.(createOpts);
       if (avail && avail !== 'unavailable') {
-        const session = await LM.create();
+        const session = await LM.create(createOpts);
         try {
-          const out = await session.prompt(prompt);
+          if (typeof prompt === 'string') {
+            const out = await session.prompt(prompt);
+            return { text: String(out), source: 'on_device' };
+          }
+          const contentParts = await Promise.all(
+            prompt.map(async (p) => {
+              if (typeof p === 'string') return { type: 'text', value: p };
+              const resp = await fetch(`data:${p.inlineData.mimeType};base64,${p.inlineData.data}`);
+              const blob = await resp.blob();
+              const bmp = await createImageBitmap(blob);
+              return { type: 'image', value: bmp };
+            })
+          );
+          const out = await session.prompt([{ role: 'user', content: contentParts }]);
           return { text: String(out), source: 'on_device' };
         } finally {
           session.destroy?.();
@@ -671,19 +701,20 @@ export async function parseMessyTextWithHybridAi(
  */
 export async function parseReceiptImageWithHybridAi(
   file: File,
-  config: FirebaseClientConfig
+  config: FirebaseClientConfig,
+  mode: RoutingChoice = 'prefer_on_device'
 ): Promise<{ row: LedgerRow; telemetry: TelemetryEvent }> {
   const t0 = performance.now();
-  const base64 = await fileToBase64(file);
 
-  if (config.apiKey && config.projectId && config.appId) {
+  if (file.size > 64) {
     try {
+      const normalized = await normalizeImageForNano(file);
       const res = await invokeFirebaseHybridModel(
         [
           'Extract this receipt into JSON: {"date":"YYYY-MM-DD","cleanVendor":"...","rawDescription":"items summary","debit":number,"category":"...","taxTag":"100% Deductible"|"50% Meals Rule"}',
-          { inlineData: { data: base64, mimeType: file.type || 'image/png' } },
+          { inlineData: { data: normalized.base64, mimeType: normalized.mimeType } },
         ],
-        'prefer_on_device',
+        mode,
         config
       );
       if (res) {
@@ -719,11 +750,14 @@ export async function parseReceiptImageWithHybridAi(
             telemetry: {
               timestamp: new Date().toLocaleTimeString(),
               action: 'Receipt Vision Scan',
-              modeRequested: 'prefer_on_device',
+              modeRequested: mode,
               inferenceSource: res.source,
               latencyMs: Math.round(performance.now() - t0),
-              bytesTransmitted: base64.length,
-              summary: `Extracted receipt via Firebase AI Logic Multimodal (${res.source})`,
+              bytesTransmitted: res.source === 'on_device' ? 0 : normalized.base64.length,
+              summary:
+                res.source === 'on_device'
+                  ? 'Extracted receipt 100% locally via Chrome Gemini Nano Vision (0B sent)'
+                  : 'Extracted receipt via Firebase AI Logic Cloud Vision fallback',
             },
           };
         }
@@ -758,6 +792,26 @@ export async function parseReceiptImageWithHybridAi(
       bytesTransmitted: 0,
       summary: 'Parsed sample receipt into ledger (add Firebase keys for live custom photo OCR)',
     },
+  };
+}
+
+async function normalizeImageForNano(
+  file: File
+): Promise<{ base64: string; mimeType: 'image/jpeg' | 'image/png' }> {
+  if (file.type === 'image/jpeg' || file.type === 'image/png') {
+    const base64 = await fileToBase64(file);
+    return { base64, mimeType: file.type };
+  }
+  const bmp = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  const ctx = canvas.getContext('2d');
+  ctx?.drawImage(bmp, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
+  return {
+    base64: dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl,
+    mimeType: 'image/png',
   };
 }
 
