@@ -1,0 +1,29 @@
+{
+  "name": "vaultcsv-hybrid-copilot",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run copy-worker && vite",
+    "build": "npm run copy-worker && tsc -b && vite build && node scripts/pack-extension.mjs",
+    "copy-worker": "node scripts/copy-worker.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "firebase": "13.4.0",
+    "lucide-react": "^0.511.0",
+    "pdfjs-dist": "^4.10.38",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.7",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.4",
+    "@vitejs/plugin-react": "^4.5.0",
+    "tailwindcss": "^4.1.7",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
