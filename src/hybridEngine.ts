@@ -382,16 +382,18 @@ async function invokeFirebaseHybridModel(
     if (!appCheckReady && config.recaptchaSiteKey) {
       appCheckReady = true;
       try {
-        if (config.recaptchaSiteKey === 'debug') {
+        const isDebug = config.recaptchaSiteKey === 'debug';
+        if (isDebug) {
           (
             self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }
           ).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-        } else {
-          initializeAppCheck(app, {
-            provider: new ReCaptchaEnterpriseProvider(config.recaptchaSiteKey),
-            isTokenAutoRefreshEnabled: true,
-          });
         }
+        initializeAppCheck(app, {
+          provider: new ReCaptchaEnterpriseProvider(
+            isDebug ? '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI' : config.recaptchaSiteKey
+          ),
+          isTokenAutoRefreshEnabled: true,
+        });
       } catch {
         // Ignore duplicate init
       }
